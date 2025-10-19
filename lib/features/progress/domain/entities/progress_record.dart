@@ -7,14 +7,17 @@ class ProgressRecord {
     this.bodyFatPercentage,
     this.chestCm,
     this.waistCm,
-    this.hipCm,
-    this.armCm,
-    this.thighCm,
-    this.notes,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+  this.hipCm,
+  this.armCm,
+  this.thighCm,
+  this.exerciseName,
+  this.exerciseWeight,
+  this.exerciseReps,
+  this.notes,
+  DateTime? createdAt,
+  DateTime? updatedAt,
+}) : createdAt = createdAt ?? DateTime.now(),
+     updatedAt = updatedAt ?? DateTime.now();
 
   final int? id;
   final int clientId;
@@ -26,6 +29,9 @@ class ProgressRecord {
   final double? hipCm;
   final double? armCm;
   final double? thighCm;
+  final String? exerciseName;
+  final double? exerciseWeight;
+  final int? exerciseReps;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -41,6 +47,9 @@ class ProgressRecord {
     double? hipCm,
     double? armCm,
     double? thighCm,
+    String? exerciseName,
+    double? exerciseWeight,
+    int? exerciseReps,
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -56,6 +65,9 @@ class ProgressRecord {
       hipCm: hipCm ?? this.hipCm,
       armCm: armCm ?? this.armCm,
       thighCm: thighCm ?? this.thighCm,
+      exerciseName: exerciseName ?? this.exerciseName,
+      exerciseWeight: exerciseWeight ?? this.exerciseWeight,
+      exerciseReps: exerciseReps ?? this.exerciseReps,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -74,6 +86,9 @@ class ProgressRecord {
       'hipCm': hipCm,
       'armCm': armCm,
       'thighCm': thighCm,
+      'exerciseName': exerciseName,
+      'exerciseWeight': exerciseWeight,
+      'exerciseReps': exerciseReps,
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -92,6 +107,9 @@ class ProgressRecord {
       hipCm: (json['hipCm'] as num?)?.toDouble(),
       armCm: (json['armCm'] as num?)?.toDouble(),
       thighCm: (json['thighCm'] as num?)?.toDouble(),
+      exerciseName: json['exerciseName'] as String?,
+      exerciseWeight: (json['exerciseWeight'] as num?)?.toDouble(),
+      exerciseReps: json['exerciseReps'] as int?,
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
@@ -113,6 +131,9 @@ class ProgressRecord {
             hipCm == other.hipCm &&
             armCm == other.armCm &&
             thighCm == other.thighCm &&
+            exerciseName == other.exerciseName &&
+            exerciseWeight == other.exerciseWeight &&
+            exerciseReps == other.exerciseReps &&
             notes == other.notes &&
             createdAt == other.createdAt &&
             updatedAt == other.updatedAt;
@@ -131,6 +152,9 @@ class ProgressRecord {
       hipCm,
       armCm,
       thighCm,
+      exerciseName,
+      exerciseWeight,
+      exerciseReps,
       notes,
       createdAt,
       updatedAt,
