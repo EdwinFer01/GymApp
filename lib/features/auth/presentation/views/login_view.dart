@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:my_gym_app/features/home/presentation/views/home_view.dart';
+
 import '../viewmodels/login_view_model.dart';
 import '../widgets/login_button.dart';
 import '../widgets/login_form.dart';
@@ -37,14 +39,29 @@ class _LoginViewState extends State<LoginView> {
 
     if (!mounted) return;
 
-    final message = success
-        ? 'Sesion iniciada correctamente'
-        : viewModel.errorMessage ?? 'No se pudo iniciar sesion';
+    if (success) {
+      final user = viewModel.currentUser;
+      if (user != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => HomeView(user: user)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Sesion iniciada, pero no se pudo obtener el usuario',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
 
-    final color = success ? Colors.green : Colors.red;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    final message = viewModel.errorMessage ?? 'No se pudo iniciar sesion';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override

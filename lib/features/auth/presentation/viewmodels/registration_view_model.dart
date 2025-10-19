@@ -18,6 +18,7 @@ class RegistrationViewModel extends BaseViewModel {
     required String name,
     required String email,
     required String password,
+    required AuthRole role,
   }) async {
     setBusy(true);
     _errorMessage = null;
@@ -33,7 +34,7 @@ class RegistrationViewModel extends BaseViewModel {
         email: email,
         password: password,
         displayName: name,
-        role: AuthRole.client,
+        role: role,
       );
       return true;
     } catch (error) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../domain/entities/auth_user.dart';
 import '../viewmodels/registration_view_model.dart';
 
 class RegistrationView extends StatefulWidget {
@@ -19,6 +20,7 @@ class _RegistrationViewState extends State<RegistrationView> {
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+  AuthRole _selectedRole = AuthRole.client;
 
   @override
   void dispose() {
@@ -36,6 +38,7 @@ class _RegistrationViewState extends State<RegistrationView> {
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
+      role: _selectedRole,
     );
 
     if (!mounted) return;
@@ -112,6 +115,42 @@ class _RegistrationViewState extends State<RegistrationView> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Selecciona el tipo de usuario',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<AuthRole>(
+                  segments: const [
+                    ButtonSegment<AuthRole>(
+                      value: AuthRole.client,
+                      icon: Icon(Icons.fitness_center_outlined),
+                      label: Text('Cliente'),
+                    ),
+                    ButtonSegment<AuthRole>(
+                      value: AuthRole.coach,
+                      icon: Icon(Icons.support_agent_outlined),
+                      label: Text('Entrenador'),
+                    ),
+                    ButtonSegment<AuthRole>(
+                      value: AuthRole.admin,
+                      icon: Icon(Icons.admin_panel_settings_outlined),
+                      label: Text('Admin'),
+                    ),
+                  ],
+                  selected: <AuthRole>{_selectedRole},
+                  onSelectionChanged: (selection) {
+                    setState(() {
+                      _selectedRole = selection.first;
+                    });
+                  },
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
