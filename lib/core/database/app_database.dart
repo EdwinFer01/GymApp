@@ -2,7 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqflite.dart' as sqflite;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../constants/table_names.dart';
 
@@ -14,9 +15,10 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
 
-  Database? _database;
+  sqflite.Database? _database;
+  static bool _isFactoryInitialized = false;
 
-  Future<Database> get database async {
+  Future<sqflite.Database> get database async {
     if (_database != null) {
       return _database!;
     }
@@ -24,11 +26,24 @@ class AppDatabase {
     return _database!;
   }
 
-  Future<Database> _openDatabase() async {
+  Future<void> _ensureDatabaseFactoryInitialized() async {
+    if (_isFactoryInitialized) return;
+
+    if (Platform.isWindows || Platform.isLinux) {
+      sqfliteFfiInit();
+      sqflite.databaseFactory = databaseFactoryFfi;
+    }
+
+    _isFactoryInitialized = true;
+  }
+
+  Future<sqflite.Database> _openDatabase() async {
+    await _ensureDatabaseFactoryInitialized();
+
     final Directory directory = await getApplicationDocumentsDirectory();
     final String path = p.join(directory.path, _dbName);
 
-    return openDatabase(
+    return sqflite.openDatabase(
       path,
       version: _dbVersion,
       onConfigure: (db) async {
@@ -40,7 +55,7 @@ class AppDatabase {
     );
   }
 
-  Future<void> _createSchema(Database db) async {
+  Future<void> _createSchema(sqflite.Database db) async {
     await db.transaction((txn) async {
       await txn.execute('''
         CREATE TABLE ${TableNames.users} (

@@ -1,7 +1,7 @@
 import '../../domain/entities/training_session.dart';
 
 class TrainingSessionModel extends TrainingSession {
-  const TrainingSessionModel({
+  TrainingSessionModel({
     super.id,
     required super.clientId,
     required super.title,

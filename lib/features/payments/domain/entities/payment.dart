@@ -3,7 +3,7 @@ enum PaymentStatus { pending, completed, failed, refunded }
 enum PaymentMethod { cash, card, bankTransfer, digitalWallet, other }
 
 class Payment {
-  const Payment({
+  Payment({
     this.id,
     required this.membershipId,
     required this.amount,

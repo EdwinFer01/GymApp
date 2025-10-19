@@ -1,7 +1,7 @@
 enum AuthRole { admin, coach, client }
 
 class AuthUser {
-  const AuthUser({
+  AuthUser({
     required this.id,
     required this.email,
     required this.displayName,

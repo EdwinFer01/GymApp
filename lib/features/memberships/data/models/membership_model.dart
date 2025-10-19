@@ -1,7 +1,7 @@
 import '../../domain/entities/membership.dart';
 
 class MembershipModel extends Membership {
-  const MembershipModel({
+  MembershipModel({
     super.id,
     required super.clientId,
     required super.planName,

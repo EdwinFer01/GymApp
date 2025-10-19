@@ -1,7 +1,7 @@
 import '../../domain/entities/payment.dart';
 
 class PaymentModel extends Payment {
-  const PaymentModel({
+  PaymentModel({
     super.id,
     required super.membershipId,
     required super.amount,

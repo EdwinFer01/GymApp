@@ -1,7 +1,7 @@
 import '../../domain/entities/auth_user.dart';
 
 class AuthUserModel extends AuthUser {
-  const AuthUserModel({
+  AuthUserModel({
     required super.id,
     required super.email,
     required super.displayName,

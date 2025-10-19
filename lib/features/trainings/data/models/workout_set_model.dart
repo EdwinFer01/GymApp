@@ -1,7 +1,7 @@
 import '../../domain/entities/workout_set.dart';
 
 class WorkoutSetModel extends WorkoutSet {
-  const WorkoutSetModel({
+  WorkoutSetModel({
     super.id,
     required super.sessionId,
     required super.exerciseName,

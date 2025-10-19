@@ -1,5 +1,5 @@
 class ProgressRecord {
-  const ProgressRecord({
+  ProgressRecord({
     this.id,
     required this.clientId,
     required this.recordedAt,

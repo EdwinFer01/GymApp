@@ -1,7 +1,7 @@
 enum CombinationType { single, superset, triset }
 
 class WorkoutSet {
-  const WorkoutSet({
+  WorkoutSet({
     this.id,
     required this.sessionId,
     required this.exerciseName,

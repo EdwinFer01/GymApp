@@ -1,7 +1,7 @@
 import '../../domain/entities/progress_record.dart';
 
 class ProgressRecordModel extends ProgressRecord {
-  const ProgressRecordModel({
+  ProgressRecordModel({
     super.id,
     required super.clientId,
     required super.recordedAt,

@@ -1,7 +1,7 @@
 import 'package:my_gym_app/features/clients/domain/entities/client.dart';
 
 class ClientModel extends Client {
-  const ClientModel({
+  ClientModel({
     super.id,
     super.userId,
     required super.firstName,

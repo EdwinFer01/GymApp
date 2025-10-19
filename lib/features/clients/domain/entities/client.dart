@@ -1,7 +1,7 @@
 enum Gender { male, female, other, undisclosed }
 
 class Client {
-  const Client({
+  Client({
     this.id,
     this.userId,
     required this.firstName,

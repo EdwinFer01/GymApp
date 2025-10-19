@@ -1,7 +1,7 @@
 enum MembershipStatus { active, pending, expired, cancelled }
 
 class Membership {
-  const Membership({
+  Membership({
     this.id,
     required this.clientId,
     required this.planName,

@@ -1,7 +1,7 @@
 enum TrainingType { standard, superset, triset, circuit, custom }
 
 class TrainingSession {
-  const TrainingSession({
+  TrainingSession({
     this.id,
     required this.clientId,
     required this.title,
