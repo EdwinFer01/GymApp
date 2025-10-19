@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/repositories/auth_repository_impl.dart';
+import '../viewmodels/registration_view_model.dart';
+import '../views/registration_view.dart';
 
 class SignUpLink extends StatelessWidget {
   const SignUpLink({super.key});
@@ -14,7 +19,16 @@ class SignUpLink extends StatelessWidget {
         ),
         TextButton(
           onPressed: () {
-            // TODO(edwin): Navegar a la pantalla de registro cuando este lista.
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ChangeNotifierProvider(
+                  create: (_) => RegistrationViewModel(
+                    authRepository: AuthRepositoryImpl(),
+                  ),
+                  child: const RegistrationView(),
+                ),
+              ),
+            );
           },
           child: const Text('Registrate'),
         ),
