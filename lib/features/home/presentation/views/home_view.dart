@@ -8,6 +8,9 @@ import '../../../memberships/domain/entities/membership.dart';
 import '../../../memberships/presentation/viewmodels/client_membership_view_model.dart';
 import '../../../memberships/presentation/widgets/membership_bottom_sheets.dart';
 import '../../../progress/domain/entities/progress_record.dart';
+import '../../../trainings/domain/entities/training_session.dart';
+import '../../../trainings/presentation/viewmodels/client_training_view_model.dart';
+import '../../../trainings/presentation/views/training_booking_view.dart';
 import '../viewmodels/client_progress_view_model.dart';
 import '../viewmodels/home_view_model.dart';
 
@@ -533,8 +536,15 @@ class _ClientHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<ClientMembershipViewModel>(
-      create: (_) => ClientMembershipViewModel(user: user)..load(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ClientMembershipViewModel>(
+          create: (_) => ClientMembershipViewModel(user: user)..load(),
+        ),
+        ChangeNotifierProvider<ClientTrainingViewModel>(
+          create: (_) => ClientTrainingViewModel(clientId: user.id)..load(),
+        ),
+      ],
       child: const _ClientHomeContent(),
     );
   }
@@ -551,6 +561,10 @@ class _ClientHomeContent extends StatelessWidget {
     final showClasses = _shouldShowClassesSection(membership);
     final isBusy = membershipViewModel.isBusy;
     final error = membershipViewModel.lastError;
+    final trainingViewModel = context.watch<ClientTrainingViewModel>();
+    final trainingBusy = trainingViewModel.isBusy;
+    final trainingSessions = trainingViewModel.sessions;
+    final trainingError = trainingViewModel.lastError;
 
     return ListView(
       key: const ValueKey('client-home'),
@@ -690,16 +704,39 @@ class _ClientHomeContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const _ClientScheduleCard(
-            title: 'Funcional',
-            datetime: 'Hoy - 19:00',
-            trainer: 'Entrenador: Natalia Vazquez',
-          ),
-          const _ClientScheduleCard(
-            title: 'Boxing Fit',
-            datetime: 'Manana - 08:00',
-            trainer: 'Entrenador: Diego Rios',
-          ),
+          if (trainingBusy)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else if (trainingSessions.isEmpty)
+            _EmptyScheduleNotice(theme: theme)
+          else
+            ...trainingSessions
+                .take(3)
+                .map(
+                  (session) => _ClientTrainingSessionCard(
+                    session: session,
+                    canEdit: _canModifyTrainingSession(session),
+                    onEdit: () => _editTrainingSession(context, session),
+                    onDelete: () => _deleteTrainingSession(context, session),
+                  ),
+                ),
+          if (!trainingBusy && trainingError != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              trainingError,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ],
         ],
       ],
     );
@@ -725,39 +762,29 @@ Future<void> _handleEditMembership(
 }
 
 void _handleScheduleTraining(BuildContext context) {
+  final trainingViewModel = context.read<ClientTrainingViewModel>();
   showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     showDragHandle: true,
     builder: (modalContext) {
       final theme = Theme.of(modalContext);
       final options = <_TrainingOption>[
-        const _TrainingOption(
-          icon: Icons.fitness_center_outlined,
-          title: 'Entrenamiento de fuerza',
-          description: 'Sesiones centradas en levantamiento y resistencia.',
-        ),
-        const _TrainingOption(
-          icon: Icons.directions_run_outlined,
-          title: 'Cardio intensivo',
-          description: 'Clases para mejorar tu resistencia aeróbica.',
-        ),
-        const _TrainingOption(
-          icon: Icons.self_improvement_outlined,
-          title: 'Rehabilitación',
-          description: 'Enfoque en movilidad, estiramientos y recuperación.',
-        ),
-        const _TrainingOption(
-          icon: Icons.group_outlined,
-          title: 'Grupales',
-          description: 'Agenda sesiones compartidas con otros miembros.',
-        ),
+        _trainingOptionForType(TrainingType.standard),
+        _trainingOptionForType(TrainingType.circuit),
+        _trainingOptionForType(TrainingType.custom),
+        _trainingOptionForType(TrainingType.superset),
       ];
 
       return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            16,
+            24,
+            24 + MediaQuery.of(modalContext).viewInsets.bottom,
+          ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -792,15 +819,33 @@ void _handleScheduleTraining(BuildContext context) {
                       ),
                     ),
                     subtitle: Text(option.description),
-                    onTap: () {
+                    onTap: () async {
                       Navigator.of(modalContext).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Abriremos la agenda para "${option.title}" pronto.',
-                          ),
+                      final booked = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ChangeNotifierProvider<
+                                ClientTrainingViewModel
+                              >.value(
+                                value: trainingViewModel,
+                                child: TrainingBookingView(
+                                  trainingTitle: option.title,
+                                  trainingDescription: option.description,
+                                  trainingIcon: option.icon,
+                                  trainingType: option.type,
+                                ),
+                              ),
                         ),
                       );
+                      if (booked == true && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Entrenamiento "${option.title}" agendado.',
+                            ),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),
@@ -810,6 +855,83 @@ void _handleScheduleTraining(BuildContext context) {
         ),
       );
     },
+  );
+}
+
+Future<void> _editTrainingSession(
+  BuildContext context,
+  TrainingSession session,
+) async {
+  if (!_canModifyTrainingSession(session)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Solo puedes editar hasta una hora antes del inicio.'),
+      ),
+    );
+    return;
+  }
+
+  final trainingViewModel = context.read<ClientTrainingViewModel>();
+  final option = _trainingOptionForType(session.type);
+  final updated = await Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      builder: (_) => ChangeNotifierProvider<ClientTrainingViewModel>.value(
+        value: trainingViewModel,
+        child: TrainingBookingView(
+          trainingTitle: session.title,
+          trainingDescription: option.description,
+          trainingIcon: option.icon,
+          trainingType: session.type,
+          existingSession: session,
+        ),
+      ),
+    ),
+  );
+
+  if (updated == true && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Entrenamiento actualizado.')));
+  }
+}
+
+Future<void> _deleteTrainingSession(
+  BuildContext context,
+  TrainingSession session,
+) async {
+  final confirmed =
+      await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Eliminar entrenamiento'),
+          content: Text('Seguro que quieres eliminar "${session.title}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+  if (!confirmed || !context.mounted) return;
+
+  final trainingViewModel = context.read<ClientTrainingViewModel>();
+  final success = await trainingViewModel.deleteTraining(session);
+
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        success
+            ? 'Entrenamiento eliminado.'
+            : 'No pudimos eliminar el entrenamiento.',
+      ),
+    ),
   );
 }
 
@@ -849,9 +971,20 @@ Membership _emptyMembership(int clientId) {
 bool _shouldShowClassesSection(Membership? membership) {
   if (membership == null) return false;
   final isActive = membership.status == MembershipStatus.active;
-  final isCustomPlan =
-      membership.planName.toLowerCase().trim() == 'personalizado';
+  final isCustomPlan = _isPersonalizedPlan(membership);
   return isActive && isCustomPlan;
+}
+
+bool _isPersonalizedPlan(Membership membership) {
+  final name = membership.planName.toLowerCase().trim();
+  final looksPersonalized = name.contains('personaliz');
+  final missingCycle = membership.billingCycleDays == null;
+  return looksPersonalized || missingCycle;
+}
+
+bool _canModifyTrainingSession(TrainingSession session) {
+  final threshold = DateTime.now().add(const Duration(hours: 1));
+  return session.scheduledAt.isAfter(threshold);
 }
 
 class _ClientProgressPage extends StatelessWidget {
@@ -873,11 +1006,209 @@ class _TrainingOption {
     required this.icon,
     required this.title,
     required this.description,
+    required this.type,
   });
 
   final IconData icon;
   final String title;
   final String description;
+  final TrainingType type;
+}
+
+_TrainingOption _trainingOptionForType(TrainingType type) {
+  switch (type) {
+    case TrainingType.standard:
+      return const _TrainingOption(
+        icon: Icons.fitness_center_outlined,
+        title: 'Entrenamiento de fuerza',
+        description: 'Sesiones enfocadas en fuerza y resistencia.',
+        type: TrainingType.standard,
+      );
+    case TrainingType.superset:
+      return const _TrainingOption(
+        icon: Icons.group_outlined,
+        title: 'Grupales',
+        description: 'Agenda sesiones compartidas con otros miembros.',
+        type: TrainingType.superset,
+      );
+    case TrainingType.triset:
+      return const _TrainingOption(
+        icon: Icons.repeat_outlined,
+        title: 'Triset',
+        description: 'Tres ejercicios consecutivos sin descanso.',
+        type: TrainingType.triset,
+      );
+    case TrainingType.circuit:
+      return const _TrainingOption(
+        icon: Icons.directions_run_outlined,
+        title: 'Cardio intensivo',
+        description: 'Clases para mejorar resistencia aerobica.',
+        type: TrainingType.circuit,
+      );
+    case TrainingType.custom:
+      return const _TrainingOption(
+        icon: Icons.self_improvement_outlined,
+        title: 'Rehabilitacion',
+        description: 'Movilidad, estiramientos y recuperacion guiada.',
+        type: TrainingType.custom,
+      );
+  }
+}
+
+class _ClientTrainingSessionCard extends StatelessWidget {
+  const _ClientTrainingSessionCard({
+    required this.session,
+    required this.canEdit,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final TrainingSession session;
+  final bool canEdit;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final option = _trainingOptionForType(session.type);
+    final scheduleText = _formatSessionDateTime(context, session.scheduledAt);
+    final trainerText = (session.notes ?? '').trim().isEmpty
+        ? 'Entrenador por asignar'
+        : 'Entrenador: ${session.notes}';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 8,
+          ),
+          leading: CircleAvatar(
+            backgroundColor: theme.colorScheme.primaryContainer,
+            foregroundColor: theme.colorScheme.primary,
+            child: Icon(option.icon),
+          ),
+          title: Text(
+            session.title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 6),
+              Text(scheduleText),
+              const SizedBox(height: 4),
+              Text(trainerText),
+              if (!canEdit) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'La edicion se habilita solo hasta 1 hora antes.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          trailing: PopupMenuButton<_TrainingCardAction>(
+            onSelected: (action) {
+              switch (action) {
+                case _TrainingCardAction.edit:
+                  if (canEdit) {
+                    onEdit();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Solo puedes editar hasta una hora antes del inicio.',
+                        ),
+                      ),
+                    );
+                  }
+                  break;
+                case _TrainingCardAction.delete:
+                  onDelete();
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<_TrainingCardAction>(
+                value: _TrainingCardAction.edit,
+                enabled: canEdit,
+                child: const Text('Editar'),
+              ),
+              const PopupMenuItem<_TrainingCardAction>(
+                value: _TrainingCardAction.delete,
+                child: Text('Eliminar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatSessionDateTime(BuildContext context, DateTime value) {
+    final localizations = MaterialLocalizations.of(context);
+    final date = localizations.formatMediumDate(value);
+    final time = localizations.formatTimeOfDay(
+      TimeOfDay.fromDateTime(value),
+      alwaysUse24HourFormat:
+          MediaQuery.maybeOf(context)?.alwaysUse24HourFormat ?? false,
+    );
+    return '$date - $time';
+  }
+}
+
+enum _TrainingCardAction { edit, delete }
+
+class _EmptyScheduleNotice extends StatelessWidget {
+  const _EmptyScheduleNotice({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.event_note_outlined, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sin clases programadas',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Agenda tu primera sesion desde el boton de arriba.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ClientProgressBody extends StatelessWidget {
@@ -1675,7 +2006,7 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
       TimeOfDay.fromDateTime(_selectedDateTime),
       alwaysUse24HourFormat: use24h,
     );
-    return '$dateText • $timeText';
+    return '$dateText â€¢ $timeText';
   }
 }
 
@@ -1787,7 +2118,7 @@ String _formatRecordTimestamp(BuildContext context, DateTime dateTime) {
     alwaysUse24HourFormat: use24h,
   );
   final relative = _formatRelativeDate(dateTime);
-  return '$dateText • $timeText ($relative)';
+  return '$dateText â€¢ $timeText ($relative)';
 }
 
 class _ProgressLogTile extends StatelessWidget {
@@ -2352,53 +2683,6 @@ class _CoachClientCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ClientScheduleCard extends StatelessWidget {
-  const _ClientScheduleCard({
-    required this.title,
-    required this.datetime,
-    required this.trainer,
-  });
-
-  final String title;
-  final String datetime;
-  final String trainer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-        leading: CircleAvatar(
-          backgroundColor: Colors.blueGrey.shade100,
-          child: const Icon(Icons.access_time, color: Colors.black87),
-        ),
-        title: Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Text(datetime),
-            const SizedBox(height: 4),
-            Text(trainer),
-          ],
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
       ),
     );
   }
