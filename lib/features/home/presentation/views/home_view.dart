@@ -615,7 +615,6 @@ class _ClientHomeContent extends StatelessWidget {
     final membershipViewModel = context.watch<ClientMembershipViewModel>();
     final membership = membershipViewModel.currentMembership;
     final isBusy = membershipViewModel.isBusy;
-    final error = membershipViewModel.lastError;
 
     return ListView(
       key: const ValueKey('client-home'),
@@ -658,8 +657,8 @@ class _ClientHomeContent extends StatelessWidget {
                     )
                   else if (membership == null)
                     Text(
-                      'Aun no registras una membresia activa. Usa Actualizar '
-                      'para agregar los datos de tu plan.',
+                      'Aun no registras una membresia activa. '
+                      'Contacta a tu entrenador para agregar los datos de tu plan.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onPrimaryContainer,
                       ),
@@ -711,25 +710,6 @@ class _ClientHomeContent extends StatelessWidget {
                     ],
                   ],
                   const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: isBusy
-                        ? null
-                        : () => _handleEditMembership(
-                            context,
-                            membershipViewModel,
-                          ),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Actualizar'),
-                  ),
-                  if (!isBusy && error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      error,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -742,20 +722,6 @@ class _ClientHomeContent extends StatelessWidget {
 
 void _handleMembershipDetail(BuildContext context, Membership membership) {
   showMembershipDetailSheet(context, membership: membership);
-}
-
-Future<void> _handleEditMembership(
-  BuildContext context,
-  ClientMembershipViewModel viewModel,
-) async {
-  final membership =
-      viewModel.currentMembership ?? _emptyMembership(viewModel.clientId);
-
-  await showMembershipEditSheet(
-    context,
-    initialMembership: membership,
-    onSubmit: viewModel.saveMembership,
-  );
 }
 
 String _formatMembershipDate(DateTime date) {
@@ -776,19 +742,6 @@ String _membershipStatusLabel(MembershipStatus status) {
     case MembershipStatus.cancelled:
       return 'Cancelada';
   }
-}
-
-Membership _emptyMembership(int clientId) {
-  final now = DateTime.now();
-  return Membership(
-    clientId: clientId,
-    planName: 'Personalizado',
-    price: 0,
-    startDate: now,
-    endDate: now.add(const Duration(days: 30)),
-    status: MembershipStatus.pending,
-    billingCycleDays: null,
-  );
 }
 
 class _ClientProgressPage extends StatelessWidget {
