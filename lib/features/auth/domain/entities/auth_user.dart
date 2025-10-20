@@ -1,11 +1,14 @@
 enum AuthRole { admin, coach, client }
 
 class AuthUser {
+  static const Object _unset = Object();
+
   AuthUser({
     required this.id,
     required this.email,
     required this.displayName,
     required this.role,
+    this.photoUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
@@ -15,6 +18,7 @@ class AuthUser {
   final String email;
   final String displayName;
   final AuthRole role;
+  final String? photoUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -23,6 +27,7 @@ class AuthUser {
     String? email,
     String? displayName,
     AuthRole? role,
+    Object? photoUrl = _unset,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -31,6 +36,9 @@ class AuthUser {
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       role: role ?? this.role,
+      photoUrl: identical(photoUrl, _unset)
+          ? this.photoUrl
+          : photoUrl as String?,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -42,6 +50,7 @@ class AuthUser {
       'email': email,
       'displayName': displayName,
       'role': role.name,
+      'photoUrl': photoUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -55,6 +64,7 @@ class AuthUser {
       role: AuthRole.values.byName(
         (json['role'] as String?) ?? AuthRole.client.name,
       ),
+      photoUrl: json['photoUrl'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -69,12 +79,21 @@ class AuthUser {
             email == other.email &&
             displayName == other.displayName &&
             role == other.role &&
+            photoUrl == other.photoUrl &&
             createdAt == other.createdAt &&
             updatedAt == other.updatedAt;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, email, displayName, role, createdAt, updatedAt);
+    return Object.hash(
+      id,
+      email,
+      displayName,
+      role,
+      photoUrl,
+      createdAt,
+      updatedAt,
+    );
   }
 }

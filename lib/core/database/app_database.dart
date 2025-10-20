@@ -11,7 +11,7 @@ class AppDatabase {
   AppDatabase._();
 
   static const _dbName = 'my_gym_app.db';
-  static const _dbVersion = 2;
+  static const _dbVersion = 3;
 
   static final AppDatabase instance = AppDatabase._();
 
@@ -54,24 +54,24 @@ class AppDatabase {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
-          await db.execute(
-            '''
+          await db.execute('''
             ALTER TABLE ${TableNames.progressRecords}
             ADD COLUMN exercise_name TEXT
-          ''',
-          );
-          await db.execute(
-            '''
+          ''');
+          await db.execute('''
             ALTER TABLE ${TableNames.progressRecords}
             ADD COLUMN exercise_weight REAL
-          ''',
-          );
-          await db.execute(
-            '''
+          ''');
+          await db.execute('''
             ALTER TABLE ${TableNames.progressRecords}
             ADD COLUMN exercise_reps INTEGER
-          ''',
-          );
+          ''');
+        }
+        if (oldVersion < 3) {
+          await db.execute('''
+            ALTER TABLE ${TableNames.users}
+            ADD COLUMN photo_url TEXT
+          ''');
         }
       },
     );
@@ -86,6 +86,7 @@ class AppDatabase {
           password_hash TEXT NOT NULL,
           display_name TEXT NOT NULL,
           role TEXT NOT NULL,
+          photo_url TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )

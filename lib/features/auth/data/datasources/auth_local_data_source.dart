@@ -44,6 +44,7 @@ class AuthLocalDataSource {
     required String password,
     required String displayName,
     required String role,
+    String? photoUrl,
   }) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
@@ -52,6 +53,7 @@ class AuthLocalDataSource {
       'password_hash': _hashPassword(password),
       'display_name': displayName,
       'role': role,
+      'photo_url': photoUrl,
       'created_at': now,
       'updated_at': now,
     }, conflictAlgorithm: ConflictAlgorithm.abort);

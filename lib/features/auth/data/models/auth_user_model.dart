@@ -6,6 +6,7 @@ class AuthUserModel extends AuthUser {
     required super.email,
     required super.displayName,
     required super.role,
+    super.photoUrl,
     required this.passwordHash,
     super.createdAt,
     super.updatedAt,
@@ -22,6 +23,7 @@ class AuthUserModel extends AuthUser {
       email: user.email,
       displayName: user.displayName,
       role: user.role,
+      photoUrl: user.photoUrl,
       passwordHash: passwordHash,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -36,6 +38,7 @@ class AuthUserModel extends AuthUser {
       role: AuthRole.values.byName(
         (map['role'] as String?) ?? AuthRole.client.name,
       ),
+      photoUrl: map['photo_url'] as String?,
       passwordHash: map['password_hash'] as String,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -49,6 +52,7 @@ class AuthUserModel extends AuthUser {
       'display_name': displayName,
       'role': role.name,
       'password_hash': passwordHash,
+      'photo_url': photoUrl,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -60,6 +64,7 @@ class AuthUserModel extends AuthUser {
       email: email,
       displayName: displayName,
       role: role,
+      photoUrl: photoUrl,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );

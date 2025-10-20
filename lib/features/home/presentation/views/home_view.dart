@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -2414,6 +2415,14 @@ class _ProfilePage extends StatelessWidget {
     final theme = Theme.of(context);
     final user = context.watch<HomeViewModel>().user;
     final actions = _HomeCopy.profileActions(context, role);
+    final photoPath = user.photoUrl;
+    ImageProvider<Object>? avatarImage;
+    if (photoPath != null && photoPath.isNotEmpty) {
+      final file = File(photoPath);
+      if (file.existsSync()) {
+        avatarImage = FileImage(file);
+      }
+    }
 
     return ListView(
       key: ValueKey('profile-'),
@@ -2422,11 +2431,14 @@ class _ProfilePage extends StatelessWidget {
         CircleAvatar(
           radius: 40,
           backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            Icons.person,
-            size: 48,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
+          backgroundImage: avatarImage,
+          child: avatarImage != null
+              ? null
+              : Icon(
+                  Icons.person,
+                  size: 48,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
         ),
         const SizedBox(height: 16),
         Text(

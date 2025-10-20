@@ -37,6 +37,7 @@ class AuthRepositoryImpl implements AuthRepository {
       password: password,
       displayName: displayName,
       role: role.name,
+      photoUrl: null,
     );
     final user = await _localDataSource.getUserById(userId);
     if (user == null) {
