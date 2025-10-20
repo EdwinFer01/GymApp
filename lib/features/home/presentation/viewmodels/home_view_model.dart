@@ -2,9 +2,11 @@ import '../../../../core/viewmodels/base_view_model.dart';
 import '../../../auth/domain/entities/auth_user.dart';
 
 class HomeViewModel extends BaseViewModel {
-  HomeViewModel({required this.user});
+  HomeViewModel({required AuthUser user}) : _user = user;
 
-  final AuthUser user;
+  AuthUser _user;
+
+  AuthUser get user => _user;
 
   int _currentIndex = 1;
 
@@ -14,6 +16,12 @@ class HomeViewModel extends BaseViewModel {
     if (index >= totalTabs) return;
     if (_currentIndex == index) return;
     _currentIndex = index;
+    notifyListeners();
+  }
+
+  void updateUser(AuthUser user) {
+    if (_user == user) return;
+    _user = user;
     notifyListeners();
   }
 }

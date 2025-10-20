@@ -11,6 +11,8 @@ import '../../../progress/domain/entities/progress_record.dart';
 import '../../../trainings/domain/entities/training_session.dart';
 import '../../../trainings/presentation/viewmodels/client_training_view_model.dart';
 import '../../../trainings/presentation/views/training_booking_view.dart';
+import '../../../user_profile/presentation/pages/edit_profile_page.dart';
+import '../../../user_profile/presentation/pages/training_goals_page.dart';
 import '../viewmodels/client_progress_view_model.dart';
 import '../viewmodels/home_view_model.dart';
 
@@ -212,60 +214,101 @@ class _HomeCopy {
     }
   }
 
-  static List<_ProfileAction> profileActions(AuthRole role) {
+  static List<_ProfileAction> profileActions(
+    BuildContext context,
+    AuthRole role,
+  ) {
+    final homeViewModel = context.read<HomeViewModel>();
+
+    void showComingSoon(BuildContext ctx, String feature) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('$feature estara disponible pronto.')),
+      );
+    }
+
     switch (role) {
       case AuthRole.admin:
-        return const [
+        return [
           _ProfileAction(
             title: 'Configuracion general',
             subtitle: 'Gestiona usuarios, permisos y politicas.',
             icon: Icons.settings_outlined,
+            onTap: (ctx) => showComingSoon(ctx, 'Configuracion general'),
           ),
           _ProfileAction(
             title: 'Centro de ayuda',
             subtitle: 'Accede a guias y soporte de tu equipo.',
             icon: Icons.help_outline,
+            onTap: (ctx) => showComingSoon(ctx, 'Centro de ayuda'),
           ),
           _ProfileAction(
             title: 'Cerrar sesion',
             subtitle: 'Vuelve a la pantalla de acceso.',
             icon: Icons.logout,
+            onTap: (ctx) => showComingSoon(ctx, 'Cerrar sesion'),
           ),
         ];
       case AuthRole.coach:
-        return const [
+        return [
           _ProfileAction(
             title: 'Mis clientes',
             subtitle: 'Crea rutinas, controla asistencia y evaluaciones.',
             icon: Icons.people_outline,
+            onTap: (ctx) => showComingSoon(ctx, 'Mis clientes'),
           ),
           _ProfileAction(
             title: 'Preferencias',
             subtitle: 'Actualiza tus horarios y disponibilidad.',
             icon: Icons.tune,
+            onTap: (ctx) => showComingSoon(ctx, 'Preferencias'),
           ),
           _ProfileAction(
             title: 'Cerrar sesion',
             subtitle: 'Salir de la cuenta actual.',
             icon: Icons.logout,
+            onTap: (ctx) => showComingSoon(ctx, 'Cerrar sesion'),
           ),
         ];
       case AuthRole.client:
-        return const [
+        return [
           _ProfileAction(
-            title: 'Mi plan',
-            subtitle: 'Consulta tu plan actual y facturacion.',
-            icon: Icons.assignment_outlined,
-          ),
-          _ProfileAction(
-            title: 'Preferencias',
+            title: 'Objetivos',
             subtitle: 'Actualiza objetivos y recordatorios.',
             icon: Icons.favorite_outline,
+            onTap: (ctx) {
+              final navigator = Navigator.of(ctx);
+              navigator.push<void>(
+                MaterialPageRoute(builder: (_) => const TrainingGoalsPage()),
+              );
+            },
+          ),
+          _ProfileAction(
+            title: 'Editar perfil',
+            subtitle: 'Actualiza tus datos personales y de contacto.',
+            icon: Icons.edit_outlined,
+            onTap: (ctx) async {
+              final navigator = Navigator.of(ctx);
+              final messenger = ScaffoldMessenger.of(ctx);
+              final updatedUser = await navigator.push<AuthUser>(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      EditProfilePage(initialUser: homeViewModel.user),
+                ),
+              );
+              if (!ctx.mounted) return;
+              if (updatedUser != null) {
+                homeViewModel.updateUser(updatedUser);
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Perfil actualizado')),
+                );
+              }
+            },
           ),
           _ProfileAction(
             title: 'Cerrar sesion',
             subtitle: 'Salir de la cuenta actual.',
             icon: Icons.logout,
+            onTap: (ctx) => showComingSoon(ctx, 'Cerrar sesion'),
           ),
         ];
     }
@@ -2369,7 +2412,8 @@ class _ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final actions = _HomeCopy.profileActions(role);
+    final user = context.watch<HomeViewModel>().user;
+    final actions = _HomeCopy.profileActions(context, role);
 
     return ListView(
       key: ValueKey('profile-'),
@@ -2386,9 +2430,25 @@ class _ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          _HomeCopy.roleDisplay(role),
+          user.displayName,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          user.email,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: Colors.grey.shade600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _HomeCopy.roleDisplay(role),
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: Colors.blueGrey.shade600,
           ),
           textAlign: TextAlign.center,
         ),
@@ -2398,6 +2458,7 @@ class _ProfilePage extends StatelessWidget {
             title: action.title,
             subtitle: action.subtitle,
             icon: action.icon,
+            onTap: action.onTap == null ? null : () => action.onTap!(context),
           ),
       ],
     );
@@ -2513,11 +2574,13 @@ class _ProfileTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2534,7 +2597,7 @@ class _ProfileTile extends StatelessWidget {
         ),
         subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }
@@ -2545,11 +2608,13 @@ class _ProfileAction {
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
+  final void Function(BuildContext context)? onTap;
 }
 
 class _ScheduleItem extends StatelessWidget {
