@@ -172,19 +172,19 @@ class _HomeTabsBuilder {
           ),
           _HomeTabConfig(
             destination: const NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Inicio',
-            ),
-            page: _ClientHomePage(user: user),
-          ),
-          _HomeTabConfig(
-            destination: const NavigationDestination(
               icon: Icon(Icons.event_available_outlined),
               selectedIcon: Icon(Icons.event_available),
               label: 'Entrenamientos',
             ),
             page: ClientTrainingScheduleView(user: user),
+          ),
+          _HomeTabConfig(
+            destination: const NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Inicio',
+            ),
+            page: _ClientHomePage(user: user),
           ),
           _HomeTabConfig(
             destination: const NavigationDestination(
