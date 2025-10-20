@@ -9,16 +9,17 @@ class ProgressRecordModel extends ProgressRecord {
     super.bodyFatPercentage,
     super.chestCm,
     super.waistCm,
-  super.hipCm,
-  super.armCm,
-  super.thighCm,
-  super.exerciseName,
-  super.exerciseWeight,
-  super.exerciseReps,
-  super.notes,
-  super.createdAt,
-  super.updatedAt,
-});
+    super.hipCm,
+    super.armCm,
+    super.thighCm,
+    super.exerciseName,
+    super.exerciseWeight,
+    super.exerciseReps,
+    super.notes,
+    super.photoPath,
+    super.createdAt,
+    super.updatedAt,
+  });
 
   factory ProgressRecordModel.fromEntity(ProgressRecord record) {
     return ProgressRecordModel(
@@ -36,6 +37,7 @@ class ProgressRecordModel extends ProgressRecord {
       exerciseWeight: record.exerciseWeight,
       exerciseReps: record.exerciseReps,
       notes: record.notes,
+      photoPath: record.photoPath,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     );
@@ -57,6 +59,7 @@ class ProgressRecordModel extends ProgressRecord {
       exerciseWeight: (map['exercise_weight'] as num?)?.toDouble(),
       exerciseReps: map['exercise_reps'] as int?,
       notes: map['notes'] as String?,
+      photoPath: map['photo_path'] as String?,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
@@ -82,6 +85,7 @@ class ProgressRecordModel extends ProgressRecord {
       'exercise_weight': exerciseWeight,
       'exercise_reps': exerciseReps,
       'notes': notes,
+      'photo_path': photoPath,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

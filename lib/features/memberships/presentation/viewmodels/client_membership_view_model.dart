@@ -40,7 +40,7 @@ class ClientMembershipViewModel extends BaseViewModel {
       _memberships = <Membership>[];
       _current = null;
       _lastError = 'No pudimos cargar tu membresia. Intenta nuevamente.';
-      notifyListeners();
+      safeNotifyListeners();
     } finally {
       setBusy(false);
     }
@@ -76,7 +76,7 @@ class ClientMembershipViewModel extends BaseViewModel {
         .toList(growable: false);
     _memberships = normalized;
     _current = normalized.isEmpty ? null : normalized.first;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   MembershipStatus _resolveStatus(Membership membership) {

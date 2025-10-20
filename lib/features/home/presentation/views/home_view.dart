@@ -2,6 +2,9 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../../auth/domain/entities/auth_user.dart';
@@ -294,7 +297,9 @@ class _HomeCopy {
             onTap: (ctx) {
               final navigator = Navigator.of(ctx);
               navigator.push<void>(
-                MaterialPageRoute(builder: (_) => const TrainingGoalsPage()),
+                MaterialPageRoute(
+                  builder: (_) => TrainingGoalsPage(user: homeViewModel.user),
+                ),
               );
             },
           ),
@@ -961,6 +966,15 @@ class _MeasurementsHistoryView extends StatelessWidget {
       final success = await viewModel.deleteRecord(recordId);
       if (!context.mounted) return;
 
+      if (success && (record.photoPath ?? '').isNotEmpty) {
+        try {
+          final file = File(record.photoPath!);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (_) {}
+      }
+
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
         SnackBar(
@@ -972,6 +986,44 @@ class _MeasurementsHistoryView extends StatelessWidget {
           ),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
+      );
+    }
+
+    Future<void> handleViewPhoto(ProgressRecord record) async {
+      final path = record.photoPath;
+      if (path == null) return;
+
+      final file = File(path);
+      final exists = await file.exists();
+      if (!context.mounted) return;
+
+      if (!exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se encontro la foto asociada a este registro.'),
+          ),
+        );
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4,
+                child: Image.file(file, fit: BoxFit.contain),
+              ),
+            ),
+          );
+        },
       );
     }
 
@@ -990,6 +1042,10 @@ class _MeasurementsHistoryView extends StatelessWidget {
             date: _formatRecordTimestamp(context, record.recordedAt),
             onEdit: () => handleEdit(record),
             onDelete: () => handleDelete(record),
+            onViewPhoto: record.photoPath == null
+                ? null
+                : () => handleViewPhoto(record),
+            photoPath: record.photoPath,
           ),
         ),
       ),
@@ -1237,6 +1293,9 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
 
   String? _feedbackMessage;
   Color _feedbackColor = Colors.orange;
+  final ImagePicker _imagePicker = ImagePicker();
+  File? _selectedPhoto;
+  String? _existingPhotoPath;
 
   @override
   void initState() {
@@ -1252,6 +1311,8 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
     _exerciseWeightController = TextEditingController();
     _exerciseRepsController = TextEditingController();
     _selectedDateTime = widget.initialRecord?.recordedAt ?? DateTime.now();
+    _selectedPhoto = null;
+    _existingPhotoPath = widget.initialRecord?.photoPath;
     _populateFromInitialRecord();
   }
 
@@ -1320,7 +1381,7 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
             ),
           ),
           const SizedBox(height: 16),
-          if (entryType == _ProgressEntryType.measurements)
+          if (entryType == _ProgressEntryType.measurements) ...[
             _MeasurementsFormFields(
               weightController: _weightController,
               bodyFatController: _bodyFatController,
@@ -1328,8 +1389,19 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
               waistController: _waistController,
               hipController: _hipController,
               armController: _armController,
-            )
-          else
+            ),
+            const SizedBox(height: 16),
+            _MeasurementPhotoSection(
+              selectedPhoto: _selectedPhoto,
+              existingPhotoPath: _existingPhotoPath,
+              onPickCamera: isBusy
+                  ? null
+                  : () => _pickPhoto(ImageSource.camera),
+              onPickGallery: isBusy
+                  ? null
+                  : () => _pickPhoto(ImageSource.gallery),
+            ),
+          ] else
             _ExerciseFormFields(
               exerciseNameController: _exerciseNameController,
               exerciseWeightController: _exerciseWeightController,
@@ -1409,6 +1481,31 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
 
     final existing = widget.initialRecord;
     final isMeasurement = entryType == _ProgressEntryType.measurements;
+    final previousPhotoPath = existing?.photoPath;
+    String? photoPath = previousPhotoPath;
+    String? tempSavedPhotoPath;
+
+    if (isMeasurement) {
+      if (_selectedPhoto != null) {
+        try {
+          tempSavedPhotoPath = await _persistPhoto(_selectedPhoto!);
+          photoPath = tempSavedPhotoPath;
+        } catch (_) {
+          _setFeedback(
+            'No se pudo guardar la foto de progreso. Intenta de nuevo.',
+            color: Colors.red,
+          );
+          return;
+        }
+      }
+      if ((photoPath ?? '').isEmpty) {
+        _setFeedback(
+          'Adjunta una foto para completar tu registro de medicion.',
+          color: Colors.orange,
+        );
+        return;
+      }
+    }
 
     final weightKg = isMeasurement
         ? parseDouble(_weightController.text)
@@ -1458,11 +1555,23 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
       notes: _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
+      photoPath: photoPath,
       createdAt: existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
     final success = await viewModel.addRecord(record);
+    if (success &&
+        tempSavedPhotoPath != null &&
+        previousPhotoPath != null &&
+        previousPhotoPath != tempSavedPhotoPath) {
+      await _deletePhotoFile(previousPhotoPath);
+    } else if (!success &&
+        tempSavedPhotoPath != null &&
+        tempSavedPhotoPath != previousPhotoPath) {
+      await _deletePhotoFile(tempSavedPhotoPath);
+    }
+
     if (!mounted) return;
 
     if (success) {
@@ -1511,6 +1620,7 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
 
     _notesController.text = record.notes ?? '';
     _selectedDateTime = record.recordedAt;
+    _existingPhotoPath = record.photoPath;
   }
 
   Future<void> _pickDateTime(BuildContext context) async {
@@ -1545,6 +1655,53 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
     setState(() => _selectedDateTime = selected);
   }
 
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      if (!mounted || picked == null) return;
+      setState(() {
+        _selectedPhoto = File(picked.path);
+        _feedbackMessage = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      _setFeedback(
+        'No se pudo obtener la foto. Intenta de nuevo.',
+        color: Colors.red,
+      );
+    }
+  }
+
+  Future<String> _persistPhoto(File photo) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final photosDir = Directory(p.join(directory.path, 'progress_photos'));
+    if (!await photosDir.exists()) {
+      await photosDir.create(recursive: true);
+    }
+
+    final extension = p.extension(photo.path).isEmpty
+        ? '.jpg'
+        : p.extension(photo.path);
+    final filename =
+        'progress_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final destination = p.join(photosDir.path, filename);
+    final saved = await photo.copy(destination);
+    return saved.path;
+  }
+
+  Future<void> _deletePhotoFile(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
+  }
+
   String _formatSelectedDateTime(BuildContext context) {
     final localizations = MaterialLocalizations.of(context);
     final use24h = MediaQuery.maybeOf(context)?.alwaysUse24HourFormat ?? false;
@@ -1553,7 +1710,7 @@ class _ProgressEntryFormState extends State<_ProgressEntryForm> {
       TimeOfDay.fromDateTime(_selectedDateTime),
       alwaysUse24HourFormat: use24h,
     );
-    return '$dateText â€¢ $timeText';
+    return '$dateText - $timeText';
   }
 }
 
@@ -1620,6 +1777,9 @@ String _buildMeasurementDescription(ProgressRecord record) {
   if ((record.notes ?? '').isNotEmpty) {
     pieces.add(record.notes!);
   }
+  if ((record.photoPath ?? '').isNotEmpty) {
+    pieces.add('Foto adjunta');
+  }
   return pieces.isEmpty ? 'Sin detalles registrados' : pieces.join(' - ');
 }
 
@@ -1665,7 +1825,7 @@ String _formatRecordTimestamp(BuildContext context, DateTime dateTime) {
     alwaysUse24HourFormat: use24h,
   );
   final relative = _formatRelativeDate(dateTime);
-  return '$dateText â€¢ $timeText ($relative)';
+  return '$dateText - $timeText ($relative)';
 }
 
 class _ProgressLogTile extends StatelessWidget {
@@ -1675,6 +1835,8 @@ class _ProgressLogTile extends StatelessWidget {
     required this.date,
     this.onEdit,
     this.onDelete,
+    this.onViewPhoto,
+    this.photoPath,
   });
 
   final String title;
@@ -1682,10 +1844,15 @@ class _ProgressLogTile extends StatelessWidget {
   final String date;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onViewPhoto;
+  final String? photoPath;
 
   @override
   Widget build(BuildContext context) {
-    final hasActions = onEdit != null || onDelete != null;
+    final theme = Theme.of(context);
+    final hasActions =
+        onEdit != null || onDelete != null || onViewPhoto != null;
+    final hasPhoto = (photoPath ?? '').isNotEmpty;
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ListTile(
@@ -1705,12 +1872,33 @@ class _ProgressLogTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(description),
+              if (hasPhoto) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.photo_camera_back_outlined,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Foto adjunta',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 4),
               Text(
                 date,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
               ),
             ],
           ),
@@ -1719,6 +1907,9 @@ class _ProgressLogTile extends StatelessWidget {
             ? PopupMenuButton<_ProgressLogAction>(
                 onSelected: (action) {
                   switch (action) {
+                    case _ProgressLogAction.viewPhoto:
+                      onViewPhoto?.call();
+                      break;
                     case _ProgressLogAction.edit:
                       onEdit?.call();
                       break;
@@ -1728,6 +1919,11 @@ class _ProgressLogTile extends StatelessWidget {
                   }
                 },
                 itemBuilder: (context) => [
+                  if (onViewPhoto != null)
+                    const PopupMenuItem<_ProgressLogAction>(
+                      value: _ProgressLogAction.viewPhoto,
+                      child: Text('Ver foto'),
+                    ),
                   if (onEdit != null)
                     const PopupMenuItem<_ProgressLogAction>(
                       value: _ProgressLogAction.edit,
@@ -1741,13 +1937,119 @@ class _ProgressLogTile extends StatelessWidget {
                 ],
               )
             : const Icon(Icons.chevron_right),
-        onTap: onEdit,
+        onTap: onViewPhoto ?? onEdit,
       ),
     );
   }
 }
 
-enum _ProgressLogAction { edit, delete }
+enum _ProgressLogAction { viewPhoto, edit, delete }
+
+class _MeasurementPhotoSection extends StatelessWidget {
+  const _MeasurementPhotoSection({
+    required this.selectedPhoto,
+    required this.existingPhotoPath,
+    required this.onPickCamera,
+    required this.onPickGallery,
+  });
+
+  final File? selectedPhoto;
+  final String? existingPhotoPath;
+  final VoidCallback? onPickCamera;
+  final VoidCallback? onPickGallery;
+
+  @override
+  Widget build(BuildContext context) {
+    File? preview = selectedPhoto;
+    if (preview == null && (existingPhotoPath ?? '').isNotEmpty) {
+      final file = File(existingPhotoPath!);
+      if (file.existsSync()) {
+        preview = file;
+      }
+    }
+
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Foto de progreso',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Adjunta una foto desde la camara o tu galeria para comparar tu avance.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onPickCamera,
+              icon: const Icon(Icons.photo_camera_outlined),
+              label: const Text('Camara'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onPickGallery,
+              icon: const Icon(Icons.photo_library_outlined),
+              label: const Text('Galeria'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: preview != null
+              ? ClipRRect(
+                  key: const ValueKey('measurement-photo-preview'),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(
+                    preview,
+                    height: 220,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Container(
+                  key: const ValueKey('measurement-photo-placeholder'),
+                  height: 220,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                    color: theme.colorScheme.surfaceVariant.withOpacity(0.35),
+                  ),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add_a_photo_outlined,
+                        size: 36,
+                        color: theme.colorScheme.outline,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sin foto seleccionada',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
 
 class _MeasurementsFormFields extends StatelessWidget {
   const _MeasurementsFormFields({

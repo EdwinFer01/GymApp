@@ -3,8 +3,8 @@ import '../../../auth/domain/entities/auth_user.dart';
 
 class HomeViewModel extends BaseViewModel {
   HomeViewModel({required AuthUser user})
-      : _user = user,
-        _currentIndex = _defaultIndexFor(user.role);
+    : _user = user,
+      _currentIndex = _defaultIndexFor(user.role);
 
   AuthUser _user;
 
@@ -18,7 +18,7 @@ class HomeViewModel extends BaseViewModel {
     if (index >= totalTabs) return;
     if (_currentIndex == index) return;
     _currentIndex = index;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   static int _defaultIndexFor(AuthRole role) {
@@ -38,6 +38,6 @@ class HomeViewModel extends BaseViewModel {
     if (hasRoleChanged) {
       _currentIndex = _defaultIndexFor(user.role);
     }
-    notifyListeners();
+    safeNotifyListeners();
   }
 }

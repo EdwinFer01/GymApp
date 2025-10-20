@@ -68,7 +68,7 @@ class ClientTrainingViewModel extends BaseViewModel {
       return true;
     } catch (error) {
       _lastError = 'No pudimos guardar tu entrenamiento. Intenta nuevamente.';
-      notifyListeners();
+      safeNotifyListeners();
       return false;
     }
   }
@@ -82,7 +82,7 @@ class ClientTrainingViewModel extends BaseViewModel {
       return true;
     } catch (error) {
       _lastError = 'No pudimos eliminar el entrenamiento. Intenta nuevamente.';
-      notifyListeners();
+      safeNotifyListeners();
       return false;
     }
   }

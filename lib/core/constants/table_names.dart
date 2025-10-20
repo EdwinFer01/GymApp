@@ -7,4 +7,5 @@ class TableNames {
   static const trainingSessions = 'training_sessions';
   static const workoutSets = 'workout_sets';
   static const progressRecords = 'progress_records';
+  static const trainingGoals = 'training_goals';
 }

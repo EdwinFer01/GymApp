@@ -7,17 +7,18 @@ class ProgressRecord {
     this.bodyFatPercentage,
     this.chestCm,
     this.waistCm,
-  this.hipCm,
-  this.armCm,
-  this.thighCm,
-  this.exerciseName,
-  this.exerciseWeight,
-  this.exerciseReps,
-  this.notes,
-  DateTime? createdAt,
-  DateTime? updatedAt,
-}) : createdAt = createdAt ?? DateTime.now(),
-     updatedAt = updatedAt ?? DateTime.now();
+    this.hipCm,
+    this.armCm,
+    this.thighCm,
+    this.exerciseName,
+    this.exerciseWeight,
+    this.exerciseReps,
+    this.notes,
+    this.photoPath,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   final int? id;
   final int clientId;
@@ -33,6 +34,7 @@ class ProgressRecord {
   final double? exerciseWeight;
   final int? exerciseReps;
   final String? notes;
+  final String? photoPath;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -51,6 +53,7 @@ class ProgressRecord {
     double? exerciseWeight,
     int? exerciseReps,
     String? notes,
+    String? photoPath,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -69,6 +72,7 @@ class ProgressRecord {
       exerciseWeight: exerciseWeight ?? this.exerciseWeight,
       exerciseReps: exerciseReps ?? this.exerciseReps,
       notes: notes ?? this.notes,
+      photoPath: photoPath ?? this.photoPath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -90,6 +94,7 @@ class ProgressRecord {
       'exerciseWeight': exerciseWeight,
       'exerciseReps': exerciseReps,
       'notes': notes,
+      'photoPath': photoPath,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -111,6 +116,7 @@ class ProgressRecord {
       exerciseWeight: (json['exerciseWeight'] as num?)?.toDouble(),
       exerciseReps: json['exerciseReps'] as int?,
       notes: json['notes'] as String?,
+      photoPath: json['photoPath'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -135,6 +141,7 @@ class ProgressRecord {
             exerciseWeight == other.exerciseWeight &&
             exerciseReps == other.exerciseReps &&
             notes == other.notes &&
+            photoPath == other.photoPath &&
             createdAt == other.createdAt &&
             updatedAt == other.updatedAt;
   }
@@ -156,6 +163,7 @@ class ProgressRecord {
       exerciseWeight,
       exerciseReps,
       notes,
+      photoPath,
       createdAt,
       updatedAt,
     );

@@ -11,7 +11,7 @@ class AppDatabase {
   AppDatabase._();
 
   static const _dbName = 'my_gym_app.db';
-  static const _dbVersion = 3;
+  static const _dbVersion = 5;
 
   static final AppDatabase instance = AppDatabase._();
 
@@ -71,6 +71,25 @@ class AppDatabase {
           await db.execute('''
             ALTER TABLE ${TableNames.users}
             ADD COLUMN photo_url TEXT
+          ''');
+        }
+        if (oldVersion < 4) {
+          await db.execute('''
+            ALTER TABLE ${TableNames.progressRecords}
+            ADD COLUMN photo_path TEXT
+          ''');
+        }
+        if (oldVersion < 5) {
+          await db.execute('''
+            CREATE TABLE ${TableNames.trainingGoals} (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              exercise_name TEXT NOT NULL,
+              target_weight REAL NOT NULL,
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (user_id) REFERENCES ${TableNames.users}(id) ON DELETE CASCADE
+            )
           ''');
         }
       },
@@ -206,9 +225,22 @@ class AppDatabase {
           exercise_weight REAL,
           exercise_reps INTEGER,
           notes TEXT,
+          photo_path TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (client_id) REFERENCES ${TableNames.clients}(id) ON DELETE CASCADE
+        )
+      ''');
+
+      await txn.execute('''
+        CREATE TABLE ${TableNames.trainingGoals} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          exercise_name TEXT NOT NULL,
+          target_weight REAL NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES ${TableNames.users}(id) ON DELETE CASCADE
         )
       ''');
     });
